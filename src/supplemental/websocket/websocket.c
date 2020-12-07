@@ -955,10 +955,10 @@ ws_read_frame_cb(nni_ws *ws, ws_frame *frame)
 		nni_list_append(&ws->rxq, frame);
 		break;
 	case WS_TEXT:
-		if (!ws->recv_text) {
+		/*if (!ws->recv_text) {
 			// No support for text mode at present.
 			ws_close(ws, WS_CLOSE_UNSUPP_FORMAT);
-		}
+		}*/
 		// FALLTHROUGH
 	case WS_BINARY:
 		if (ws->inmsg) {
