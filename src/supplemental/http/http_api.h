@@ -64,6 +64,10 @@ extern nni_http_chunk *nni_http_chunks_iter(
 
 // nni_http_chunk_list_size returns the combined size of all chunks in list.
 extern size_t nni_http_chunks_size(nni_http_chunks *);
+// nni_http_chunks_last returns last `chunk` in the list.
+extern nni_http_chunk *nni_http_chunks_last(nni_http_chunks *);
+// nni_http_chunks_state_data_ready returns `true` if `data` is ready to be consumed.
+extern bool nni_http_chunks_state_data_ready(nni_http_chunks *cl, nni_http_chunk *);
 
 // nni_http_chunk_size returns the size of given chunk.
 extern size_t nni_http_chunk_size(nni_http_chunk *);
@@ -104,6 +108,8 @@ extern int  nni_http_conn_getopt(
      nni_http_conn *, const char *, void *, size_t *, nni_type);
 extern int nni_http_conn_setopt(
     nni_http_conn *, const char *, const void *, size_t, nni_type);
+extern void nni_http_conn_set_chunks_progress_handler(
+    nng_http_conn *, void (*)(void*, size_t, void*), void*);
 
 // Reading messages -- the caller must supply a preinitialized (but otherwise
 // idle) message.  We recommend the caller store this in the aio's user data.

@@ -71,6 +71,15 @@ nni_http_chunks_init(nni_http_chunks **clp, size_t maxsz)
 	return (0);
 }
 
+static void
+nni_http_chunk_free(nni_http_chunk *ch)
+{
+	if (ch->c_data != NULL) {
+		nni_free(ch->c_data, ch->c_alloc);
+	}
+	NNI_FREE_STRUCT(ch);
+}
+
 void
 nni_http_chunks_free(nni_http_chunks *cl)
 {
@@ -80,12 +89,21 @@ nni_http_chunks_free(nni_http_chunks *cl)
 	}
 	while ((ch = nni_list_first(&cl->cl_chunks)) != NULL) {
 		nni_list_remove(&cl->cl_chunks, ch);
-		if (ch->c_data != NULL) {
-			nni_free(ch->c_data, ch->c_alloc);
-		}
-		NNI_FREE_STRUCT(ch);
+		nni_http_chunk_free(ch);
 	}
 	NNI_FREE_STRUCT(cl);
+}
+
+static bool
+nni_http_chunks_remove_last(nni_http_chunks *cl)
+{
+	nni_http_chunk *ch = nni_list_last(&cl->cl_chunks);
+	if (ch == NULL) {
+		return (false);
+	}
+	nni_list_remove(&cl->cl_chunks, ch);
+	nni_http_chunk_free(ch);
+	return (true);
 }
 
 nni_http_chunk *
@@ -170,6 +188,11 @@ chunk_ingest_newline(nni_http_chunks *cl, char c)
 	    ((nni_http_chunks_size(cl) + cl->cl_size) > cl->cl_maxsz)) {
 		return (NNG_EMSGSIZE);
 	}
+
+	// `chunks` always contains one chunk to reduce memory pressure,
+	// a consumer must read chunk's data before next line read.
+    nni_http_chunks_remove_last(cl);
+
 	if ((chunk = NNI_ALLOC_STRUCT(chunk)) == NULL) {
 		return (NNG_ENOMEM);
 	}
@@ -338,4 +361,16 @@ nni_http_chunks_parse(nni_http_chunks *cl, void *buf, size_t n, size_t *lenp)
 		return (NNG_EAGAIN);
 	}
 	return (0);
+}
+
+nni_http_chunk
+*nni_http_chunks_last(nni_http_chunks *cl)
+{
+	return nni_list_last(&cl->cl_chunks);
+}
+
+bool
+nni_http_chunks_state_data_ready(nni_http_chunks *cl, nni_http_chunk *ch)
+{
+	return cl->cl_state == CS_INIT && ch->c_resid == 0;
 }

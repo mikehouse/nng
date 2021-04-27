@@ -276,6 +276,15 @@ NNG_DECL void nng_http_conn_read_req(
 NNG_DECL void nng_http_conn_read_res(
     nng_http_conn *, nng_http_res *, nng_aio *);
 
+// nng_http_conn_set_chunks_progress_handler sets handler to get the data
+// chunk when "Transfer-Encoding"="chunked".
+// If not set then after the download occurred use `nng_http_res_get_data`
+// to get the data (for now it is disabled, always set handler to read the data).
+// If set then use handler to collect all the data from request. In this case
+// the `nng_http_res_get_data` will return nothing or wring data - don't use it.
+NNG_DECL void nng_http_conn_set_chunks_progress_handler(
+	nng_http_conn *, void (*)(void*, size_t, void*), void*);
+
 // nng_http_req_reset resets the request to an initially allocated state.
 NNG_DECL void nng_http_req_reset(nng_http_req *);
 

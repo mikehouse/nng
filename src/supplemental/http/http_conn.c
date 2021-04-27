@@ -66,6 +66,8 @@ struct nng_http_conn {
 	size_t   rd_put;
 	size_t   rd_bufsz;
 	bool     rd_buffered;
+	void (*rd_buf_prgs)(void *, size_t, void *); // only for chunked
+	void *rd_buf_prgs_ctx;
 };
 
 void
@@ -137,6 +139,8 @@ http_rd_buf(nni_http_conn *conn, nni_aio *aio)
 	bool     raw = false;
 	nni_iov *iov;
 	unsigned nio;
+    nni_http_chunks *cl;
+    nni_http_chunk *ch;
 
 	rbuf += conn->rd_get;
 
@@ -218,8 +222,15 @@ http_rd_buf(nni_http_conn *conn, nni_aio *aio)
 		return (rv);
 
 	case HTTP_RD_CHUNK:
-		rv = nni_http_chunks_parse(
-		    nni_aio_get_prov_extra(aio, 1), rbuf, cnt, &n);
+        cl = nni_aio_get_prov_extra(aio, 1);
+		rv = nni_http_chunks_parse(cl, rbuf, cnt, &n);
+		ch = nni_http_chunks_last(cl);
+        if (ch != NULL && (nni_http_chunks_state_data_ready(cl, ch))) {
+            if (conn->rd_buf_prgs != NULL) {
+                conn->rd_buf_prgs(nni_http_chunk_data(ch),
+                    nni_http_chunk_size(ch), conn->rd_buf_prgs_ctx);
+            }
+		}
 		conn->rd_get += n;
 		if (conn->rd_get == conn->rd_put) {
 			conn->rd_get = conn->rd_put = 0;
@@ -675,6 +686,14 @@ nni_http_conn_setopt(nni_http_conn *conn, const char *name, const void *buf,
 	}
 	nni_mtx_unlock(&conn->mtx);
 	return (rv);
+}
+
+void
+nni_http_conn_set_chunks_progress_handler(
+	nng_http_conn *conn, void (*handler)(void*, size_t, void*), void *ctx)
+{
+	conn->rd_buf_prgs = handler;
+	conn->rd_buf_prgs_ctx = ctx;
 }
 
 void

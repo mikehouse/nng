@@ -505,6 +505,13 @@ nng_http_conn_read_res(nng_http_conn *conn, nng_http_res *res, nng_aio *aio)
 #endif
 }
 
+void
+nng_http_conn_set_chunks_progress_handler(
+	nng_http_conn *conn, void (*handler)(void*, size_t, void*), void* ctx)
+{
+	nni_http_conn_set_chunks_progress_handler(conn, handler, ctx);
+}
+
 int
 nng_http_handler_alloc(
     nng_http_handler **hp, const char *uri, void (*cb)(nng_aio *))
